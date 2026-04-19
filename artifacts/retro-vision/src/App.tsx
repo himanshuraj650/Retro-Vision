@@ -15,6 +15,9 @@ import RoutesNew from "@/pages/routes-new";
 import Alerts from "@/pages/alerts";
 import Reports from "@/pages/reports";
 import Analyze from "@/pages/analyze";
+import MapView from "@/pages/map";
+import Fleet from "@/pages/fleet";
+import Predict from "@/pages/predict";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,6 +32,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/map" component={MapView} />
+      <Route path="/fleet" component={Fleet} />
+      <Route path="/predict" component={Predict} />
       <Route path="/measurements" component={Measurements} />
       <Route path="/measurements/new" component={MeasurementsNew} />
       <Route path="/signs/new" component={SignsNew} />

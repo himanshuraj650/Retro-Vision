@@ -1,18 +1,17 @@
 import { Link, useLocation } from "wouter";
 import { 
   Activity, 
-  AlertCircle, 
   BarChart2, 
+  Brain,
   Camera, 
   FileText, 
   Map, 
   MapPin, 
-  Plus, 
-  Settings, 
   ShieldAlert,
   Menu,
   Moon,
-  Sun
+  Sun,
+  Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -27,33 +26,46 @@ export function Layout({ children }: LayoutProps) {
   const { theme, setTheme } = useTheme();
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: Activity },
-    { href: "/measurements", label: "Measurements", icon: BarChart2 },
-    { href: "/signs", label: "Asset Inventory", icon: MapPin },
-    { href: "/routes", label: "Inspection Routes", icon: Map },
-    { href: "/alerts", label: "Alerts Center", icon: ShieldAlert },
-    { href: "/reports", label: "Reports", icon: FileText },
-    { href: "/analyze", label: "AI Analyzer", icon: Camera },
+    { href: "/", label: "Dashboard", icon: Activity, section: "Overview" },
+    { href: "/map", label: "Live Map", icon: Map, section: "Overview" },
+    { href: "/measurements", label: "Measurements", icon: BarChart2, section: "Operations" },
+    { href: "/signs", label: "Asset Inventory", icon: MapPin, section: "Operations" },
+    { href: "/routes", label: "Inspection Routes", icon: Map, section: "Operations" },
+    { href: "/alerts", label: "Alerts Center", icon: ShieldAlert, section: "Operations" },
+    { href: "/fleet", label: "Fleet Command", icon: Truck, section: "Intelligence" },
+    { href: "/predict", label: "Predictive AI", icon: Brain, section: "Intelligence" },
+    { href: "/analyze", label: "AI Analyzer", icon: Camera, section: "Intelligence" },
+    { href: "/reports", label: "Reports", icon: FileText, section: "Reports" },
   ];
+
+  const sections = ["Overview", "Operations", "Intelligence", "Reports"];
 
   const NavLinks = () => (
     <>
-      {navItems.map((item) => {
-        const Icon = item.icon;
-        const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+      {sections.map(section => {
+        const items = navItems.filter(n => n.section === section);
         return (
-          <Link key={item.href} href={item.href}>
-            <div
-              className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
-                isActive
-                  ? "bg-primary text-primary-foreground font-medium shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              <span>{item.label}</span>
-            </div>
-          </Link>
+          <div key={section} className="mb-4">
+            <p className="px-3 text-[10px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest mb-1">{section}</p>
+            {items.map((item) => {
+              const Icon = item.icon;
+              const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+              return (
+                <Link key={item.href} href={item.href}>
+                  <div
+                    className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
+                      isActive
+                        ? "bg-primary text-primary-foreground font-medium shadow-sm"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="text-sm">{item.label}</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         );
       })}
     </>
@@ -104,12 +116,9 @@ export function Layout({ children }: LayoutProps) {
         </div>
         
         <div className="flex-1 overflow-y-auto p-4">
-          <div className="mb-6">
-            <p className="px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider mb-2">Platform</p>
-            <nav className="flex flex-col gap-1">
-              <NavLinks />
-            </nav>
-          </div>
+          <nav>
+            <NavLinks />
+          </nav>
         </div>
 
         <div className="p-4 border-t border-sidebar-border">

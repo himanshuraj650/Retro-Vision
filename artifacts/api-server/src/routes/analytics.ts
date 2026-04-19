@@ -208,4 +208,215 @@ router.get("/analytics/activity-feed", async (req, res) => {
   }
 });
 
+// Predictive Maintenance: compute degradation rate and predict failure date per sign
+router.get("/analytics/predictions", async (req, res) => {
+  try {
+    const signs = await db.select().from(signsTable).limit(50);
+    const predictions = await Promise.all(signs.map(async (sign) => {
+      const measurements = await db.select()
+        .from(measurementsTable)
+        .where(eq(measurementsTable.sign_id, sign.id))
+        .orderBy(measurementsTable.created_at)
+        .limit(20);
+
+      const minRequired = measurements[0]?.min_required || (sign.type === "pavement_marking" ? 100 : 150);
+
+      if (measurements.length < 2) {
+        return {
+          sign_id: sign.id,
+          sign_name: sign.name,
+          chainage: sign.chainage,
+          type: sign.type,
+          status: sign.status,
+          last_value: sign.last_value,
+          min_required: minRequired,
+          degradation_rate: null,
+          days_to_critical: null,
+          predicted_critical_date: null,
+          confidence: "low",
+          latitude: sign.latitude,
+          longitude: sign.longitude,
+        };
+      }
+
+      // Linear regression on measurement values over time
+      const n = measurements.length;
+      const times = measurements.map(m => m.created_at.getTime() / (1000 * 60 * 60 * 24)); // days
+      const values = measurements.map(m => m.value);
+
+      const sumX = times.reduce((a, b) => a + b, 0);
+      const sumY = values.reduce((a, b) => a + b, 0);
+      const sumXY = times.reduce((acc, t, i) => acc + t * values[i], 0);
+      const sumX2 = times.reduce((acc, t) => acc + t * t, 0);
+
+      const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX); // mcd/day
+      const intercept = (sumY - slope * sumX) / n;
+
+      const now = Date.now() / (1000 * 60 * 60 * 24);
+      const currentPredicted = slope * now + intercept;
+      const degradationRate = Math.abs(Math.round(slope * 30 * 10) / 10); // per month
+
+      let days_to_critical: number | null = null;
+      let predicted_critical_date: string | null = null;
+
+      if (slope < 0 && currentPredicted > minRequired) {
+        // Predict when value will hit minRequired
+        // minRequired = slope * t_crit + intercept => t_crit = (minRequired - intercept) / slope
+        const t_crit = (minRequired - intercept) / slope;
+        const daysLeft = Math.round(t_crit - now);
+        if (daysLeft > 0 && daysLeft < 3650) {
+          days_to_critical = daysLeft;
+          const critDate = new Date();
+          critDate.setDate(critDate.getDate() + daysLeft);
+          predicted_critical_date = critDate.toISOString().split("T")[0];
+        }
+      }
+
+      return {
+        sign_id: sign.id,
+        sign_name: sign.name,
+        chainage: sign.chainage,
+        type: sign.type,
+        status: sign.status,
+        last_value: sign.last_value,
+        min_required: minRequired,
+        degradation_rate: degradation_rate_label(degradationRate, slope),
+        days_to_critical,
+        predicted_critical_date,
+        confidence: measurements.length >= 5 ? "high" : "medium",
+        latitude: sign.latitude,
+        longitude: sign.longitude,
+      };
+    }));
+
+    // Sort: soonest failure first
+    predictions.sort((a, b) => {
+      if (a.days_to_critical === null && b.days_to_critical === null) return 0;
+      if (a.days_to_critical === null) return 1;
+      if (b.days_to_critical === null) return -1;
+      return a.days_to_critical - b.days_to_critical;
+    });
+
+    res.json({ predictions, total: predictions.length });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+function degradation_rate_label(ratePerMonth: number, slope: number): number {
+  return slope >= 0 ? 0 : ratePerMonth;
+}
+
+// Fleet simulation: vehicle and drone positions on routes
+router.get("/analytics/fleet", async (req, res) => {
+  try {
+    const routes = await db.select().from(routesTable).where(eq(routesTable.status, "active")).limit(5);
+
+    // Define fixed fleet units with deterministic simulated positions
+    const fleet = [
+      {
+        id: "VH-001",
+        type: "vehicle",
+        name: "MRV Alpha",
+        description: "Mobile Retroreflectometer Van",
+        status: "active",
+        speed_kmh: 60,
+        battery_pct: 92,
+        measurements_today: 47,
+        operator: "Inspector R. Sharma",
+        route_id: routes[0]?.id || null,
+        route_name: routes[0]?.name || "NH-48 Delhi–Mumbai",
+        current_chainage: "NH-48 km 342",
+        latitude: 22.3070 + Math.sin(Date.now() / 30000) * 0.01,
+        longitude: 73.1810 + Math.cos(Date.now() / 30000) * 0.01,
+        last_ping: new Date().toISOString(),
+      },
+      {
+        id: "VH-002",
+        type: "vehicle",
+        name: "MRV Bravo",
+        description: "Mobile Retroreflectometer Van",
+        status: "active",
+        speed_kmh: 55,
+        battery_pct: 78,
+        measurements_today: 31,
+        operator: "Inspector P. Patil",
+        route_id: routes[1]?.id || null,
+        route_name: routes[1]?.name || "NH-44 Srinagar–Kanyakumari",
+        current_chainage: "NH-44 km 92",
+        latitude: 12.5260 + Math.sin(Date.now() / 40000 + 1) * 0.01,
+        longitude: 78.2130 + Math.cos(Date.now() / 40000 + 1) * 0.01,
+        last_ping: new Date().toISOString(),
+      },
+      {
+        id: "DR-001",
+        type: "drone",
+        name: "UAV Delta",
+        description: "AI-Camera Retroreflectivity Drone",
+        status: "active",
+        speed_kmh: 40,
+        battery_pct: 64,
+        measurements_today: 128,
+        operator: "Auto (AI Pilot)",
+        route_id: routes[2]?.id || null,
+        route_name: routes[2]?.name || "NH-65 Pune–Hyderabad",
+        current_chainage: "NH-65 km 55",
+        latitude: 17.3840 + Math.sin(Date.now() / 25000 + 2) * 0.02,
+        longitude: 78.4860 + Math.cos(Date.now() / 25000 + 2) * 0.02,
+        last_ping: new Date().toISOString(),
+      },
+      {
+        id: "DR-002",
+        type: "drone",
+        name: "UAV Echo",
+        description: "Night-Vision Drone",
+        status: "standby",
+        speed_kmh: 0,
+        battery_pct: 100,
+        measurements_today: 0,
+        operator: "Auto (AI Pilot)",
+        route_id: null,
+        route_name: null,
+        current_chainage: "Depot — Gurugram",
+        latitude: 28.4595,
+        longitude: 77.0266,
+        last_ping: new Date().toISOString(),
+      },
+      {
+        id: "VH-003",
+        type: "vehicle",
+        name: "MRV Charlie",
+        description: "Drone-Launch Mobile Unit",
+        status: "maintenance",
+        speed_kmh: 0,
+        battery_pct: 45,
+        measurements_today: 0,
+        operator: "Workshop — Delhi",
+        route_id: null,
+        route_name: null,
+        current_chainage: "Delhi Service Depot",
+        latitude: 28.6139,
+        longitude: 77.2090,
+        last_ping: new Date(Date.now() - 3600000).toISOString(),
+      },
+    ];
+
+    const summary = {
+      total_units: fleet.length,
+      active: fleet.filter(f => f.status === "active").length,
+      standby: fleet.filter(f => f.status === "standby").length,
+      maintenance: fleet.filter(f => f.status === "maintenance").length,
+      total_measurements_today: fleet.reduce((s, f) => s + f.measurements_today, 0),
+      coverage_km: 1247,
+    };
+
+    res.json({ fleet, summary });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
+
