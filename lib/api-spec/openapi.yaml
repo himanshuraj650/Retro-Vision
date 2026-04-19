@@ -1,22 +1,35 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: RetroVision - Retroreflectivity Intelligence Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: measurements
+    description: Retroreflectivity measurements
+  - name: signs
+    description: Road signs and assets
+  - name: routes
+    description: Highway inspection routes
+  - name: alerts
+    description: Compliance alerts and notifications
+  - name: analytics
+    description: Analytics and dashboard summaries
+  - name: reports
+    description: Inspection reports
+  - name: upload
+    description: File and image upload for AI analysis
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +37,573 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # MEASUREMENTS
+  /measurements:
+    get:
+      operationId: listMeasurements
+      tags: [measurements]
+      summary: List all retroreflectivity measurements
+      parameters:
+        - name: route_id
+          in: query
+          schema:
+            type: string
+        - name: sign_id
+          in: query
+          schema:
+            type: string
+        - name: condition
+          in: query
+          schema:
+            type: string
+            enum: [day_dry, day_wet, night_dry, night_wet, foggy, no_street_light, with_street_light]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [compliant, warning, critical, unknown]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of measurements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeasurementListResponse"
+    post:
+      operationId: createMeasurement
+      tags: [measurements]
+      summary: Record a new measurement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMeasurementBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Measurement"
+
+  /measurements/{id}:
+    get:
+      operationId: getMeasurement
+      tags: [measurements]
+      summary: Get a measurement by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Measurement details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Measurement"
+    put:
+      operationId: updateMeasurement
+      tags: [measurements]
+      summary: Update a measurement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMeasurementBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Measurement"
+    delete:
+      operationId: deleteMeasurement
+      tags: [measurements]
+      summary: Delete a measurement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # SIGNS / ASSETS
+  /signs:
+    get:
+      operationId: listSigns
+      tags: [signs]
+      summary: List road signs and pavement markings
+      parameters:
+        - name: route_id
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [traffic_sign, pavement_marking, road_stud, delineator, gantry, shoulder_mounted]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [compliant, warning, critical, unknown]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of signs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignListResponse"
+    post:
+      operationId: createSign
+      tags: [signs]
+      summary: Add a new road sign or marking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSignBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sign"
+
+  /signs/{id}:
+    get:
+      operationId: getSign
+      tags: [signs]
+      summary: Get sign details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sign details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sign"
+    put:
+      operationId: updateSign
+      tags: [signs]
+      summary: Update sign details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSignBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sign"
+    delete:
+      operationId: deleteSign
+      tags: [signs]
+      summary: Delete a sign record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /signs/{id}/measurements:
+    get:
+      operationId: getSignMeasurements
+      tags: [signs]
+      summary: Get all measurements for a specific sign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Measurements for sign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeasurementListResponse"
+
+  # ROUTES
+  /routes:
+    get:
+      operationId: listRoutes
+      tags: [routes]
+      summary: List highway inspection routes
+      responses:
+        "200":
+          description: List of routes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteListResponse"
+    post:
+      operationId: createRoute
+      tags: [routes]
+      summary: Create a new inspection route
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRouteBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Route"
+
+  /routes/{id}:
+    get:
+      operationId: getRoute
+      tags: [routes]
+      summary: Get route details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Route details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Route"
+    put:
+      operationId: updateRoute
+      tags: [routes]
+      summary: Update a route
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRouteBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Route"
+    delete:
+      operationId: deleteRoute
+      tags: [routes]
+      summary: Delete a route
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # ALERTS
+  /alerts:
+    get:
+      operationId: listAlerts
+      tags: [alerts]
+      summary: List compliance alerts
+      parameters:
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [info, warning, critical]
+        - name: resolved
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of alerts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertListResponse"
+
+  /alerts/{id}/resolve:
+    post:
+      operationId: resolveAlert
+      tags: [alerts]
+      summary: Resolve an alert
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveAlertBody"
+      responses:
+        "200":
+          description: Alert resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+
+  # ANALYTICS
+  /analytics/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [analytics]
+      summary: Get dashboard summary statistics
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /analytics/compliance-trends:
+    get:
+      operationId: getComplianceTrends
+      tags: [analytics]
+      summary: Get compliance trends over time
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y]
+            default: 30d
+      responses:
+        "200":
+          description: Compliance trend data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceTrendResponse"
+
+  /analytics/condition-breakdown:
+    get:
+      operationId: getConditionBreakdown
+      tags: [analytics]
+      summary: Get retroreflectivity breakdown by measurement condition
+      responses:
+        "200":
+          description: Condition breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConditionBreakdownResponse"
+
+  /analytics/route-performance:
+    get:
+      operationId: getRoutePerformance
+      tags: [analytics]
+      summary: Get performance metrics per route
+      responses:
+        "200":
+          description: Route performance data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoutePerformanceResponse"
+
+  /analytics/critical-signs:
+    get:
+      operationId: getCriticalSigns
+      tags: [analytics]
+      summary: Get top critical signs needing immediate attention
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Critical signs list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignListResponse"
+
+  /analytics/activity-feed:
+    get:
+      operationId: getActivityFeed
+      tags: [analytics]
+      summary: Get recent inspection activity
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityFeedResponse"
+
+  # REPORTS
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List inspection reports
+      responses:
+        "200":
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportListResponse"
+    post:
+      operationId: createReport
+      tags: [reports]
+      summary: Generate a new inspection report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReportBody"
+      responses:
+        "201":
+          description: Report created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get report details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Report details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+    delete:
+      operationId: deleteReport
+      tags: [reports]
+      summary: Delete a report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  # AI ANALYSIS
+  /upload/analyze:
+    post:
+      operationId: analyzeImage
+      tags: [upload]
+      summary: Analyze an image for retroreflectivity using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeImageBody"
+      responses:
+        "200":
+          description: AI analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisResult"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +611,556 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Measurement:
+      type: object
+      properties:
+        id:
+          type: string
+        sign_id:
+          type: string
+        route_id:
+          type: string
+        value:
+          type: number
+          description: "Retroreflectivity value in mcd/lx/m²"
+        condition:
+          type: string
+          enum: [day_dry, day_wet, night_dry, night_wet, foggy, no_street_light, with_street_light]
+        method:
+          type: string
+          enum: [vehicle_mounted, drone, handheld, ai_camera]
+        status:
+          type: string
+          enum: [compliant, warning, critical, unknown]
+        irc_standard:
+          type: string
+          enum: [IRC_67, IRC_35]
+        min_required:
+          type: number
+        latitude:
+          type: number
+        longitude:
+          type: number
+        image_url:
+          type: string
+        notes:
+          type: string
+        recorded_by:
+          type: string
+        created_at:
+          type: string
+      required: [id, sign_id, route_id, value, condition, method, status, irc_standard, min_required, created_at]
+
+    MeasurementListResponse:
+      type: object
+      properties:
+        measurements:
+          type: array
+          items:
+            $ref: "#/components/schemas/Measurement"
+        total:
+          type: integer
+      required: [measurements, total]
+
+    CreateMeasurementBody:
+      type: object
+      properties:
+        sign_id:
+          type: string
+        route_id:
+          type: string
+        value:
+          type: number
+        condition:
+          type: string
+          enum: [day_dry, day_wet, night_dry, night_wet, foggy, no_street_light, with_street_light]
+        method:
+          type: string
+          enum: [vehicle_mounted, drone, handheld, ai_camera]
+        irc_standard:
+          type: string
+          enum: [IRC_67, IRC_35]
+        min_required:
+          type: number
+        latitude:
+          type: number
+        longitude:
+          type: number
+        image_url:
+          type: string
+        notes:
+          type: string
+        recorded_by:
+          type: string
+      required: [sign_id, route_id, value, condition, method, irc_standard, min_required]
+
+    UpdateMeasurementBody:
+      type: object
+      properties:
+        value:
+          type: number
+        condition:
+          type: string
+        notes:
+          type: string
+        image_url:
+          type: string
+
+    Sign:
+      type: object
+      properties:
+        id:
+          type: string
+        route_id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [traffic_sign, pavement_marking, road_stud, delineator, gantry, shoulder_mounted]
+        location_description:
+          type: string
+        chainage:
+          type: string
+          description: "km marker e.g. NH-48 km 342"
+        latitude:
+          type: number
+        longitude:
+          type: number
+        status:
+          type: string
+          enum: [compliant, warning, critical, unknown]
+        last_measured_at:
+          type: string
+        last_value:
+          type: number
+        installed_at:
+          type: string
+        image_url:
+          type: string
+        created_at:
+          type: string
+      required: [id, route_id, name, type, status, created_at]
+
+    SignListResponse:
+      type: object
+      properties:
+        signs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Sign"
+        total:
+          type: integer
+      required: [signs, total]
+
+    CreateSignBody:
+      type: object
+      properties:
+        route_id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [traffic_sign, pavement_marking, road_stud, delineator, gantry, shoulder_mounted]
+        location_description:
+          type: string
+        chainage:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        image_url:
+          type: string
+      required: [route_id, name, type]
+
+    UpdateSignBody:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        location_description:
+          type: string
+        chainage:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        image_url:
+          type: string
+
+    Route:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        highway_number:
+          type: string
+          description: "e.g. NH-48, NH-8"
+        start_chainage:
+          type: string
+        end_chainage:
+          type: string
+        length_km:
+          type: number
+        lane_count:
+          type: integer
+        type:
+          type: string
+          enum: [expressway, four_lane, two_lane]
+        status:
+          type: string
+          enum: [active, inactive, under_inspection]
+        total_signs:
+          type: integer
+        compliant_count:
+          type: integer
+        warning_count:
+          type: integer
+        critical_count:
+          type: integer
+        last_inspected_at:
+          type: string
+        created_at:
+          type: string
+      required: [id, name, highway_number, type, status, created_at]
+
+    RouteListResponse:
+      type: object
+      properties:
+        routes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Route"
+        total:
+          type: integer
+      required: [routes, total]
+
+    CreateRouteBody:
+      type: object
+      properties:
+        name:
+          type: string
+        highway_number:
+          type: string
+        start_chainage:
+          type: string
+        end_chainage:
+          type: string
+        length_km:
+          type: number
+        lane_count:
+          type: integer
+        type:
+          type: string
+          enum: [expressway, four_lane, two_lane]
+      required: [name, highway_number, type]
+
+    UpdateRouteBody:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+        length_km:
+          type: number
+        lane_count:
+          type: integer
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: string
+        sign_id:
+          type: string
+        route_id:
+          type: string
+        sign_name:
+          type: string
+        route_name:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        title:
+          type: string
+        description:
+          type: string
+        current_value:
+          type: number
+        required_value:
+          type: number
+        resolved:
+          type: boolean
+        resolved_at:
+          type: string
+        resolved_by:
+          type: string
+        resolution_note:
+          type: string
+        created_at:
+          type: string
+      required: [id, sign_id, route_id, severity, title, description, resolved, created_at]
+
+    AlertListResponse:
+      type: object
+      properties:
+        alerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Alert"
+        total:
+          type: integer
+      required: [alerts, total]
+
+    ResolveAlertBody:
+      type: object
+      properties:
+        resolved_by:
+          type: string
+        resolution_note:
+          type: string
+      required: [resolved_by]
+
+    DashboardStats:
+      type: object
+      properties:
+        total_signs:
+          type: integer
+        compliant_signs:
+          type: integer
+        warning_signs:
+          type: integer
+        critical_signs:
+          type: integer
+        compliance_rate:
+          type: number
+        total_measurements:
+          type: integer
+        measurements_today:
+          type: integer
+        active_routes:
+          type: integer
+        active_alerts:
+          type: integer
+        critical_alerts:
+          type: integer
+        avg_reflectivity:
+          type: number
+        last_inspection_date:
+          type: string
+      required: [total_signs, compliant_signs, warning_signs, critical_signs, compliance_rate, total_measurements, measurements_today, active_routes, active_alerts, critical_alerts, avg_reflectivity]
+
+    ComplianceTrendPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        compliant:
+          type: integer
+        warning:
+          type: integer
+        critical:
+          type: integer
+        compliance_rate:
+          type: number
+      required: [date, compliant, warning, critical, compliance_rate]
+
+    ComplianceTrendResponse:
+      type: object
+      properties:
+        period:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComplianceTrendPoint"
+      required: [period, data]
+
+    ConditionBreakdownItem:
+      type: object
+      properties:
+        condition:
+          type: string
+        avg_value:
+          type: number
+        min_value:
+          type: number
+        max_value:
+          type: number
+        count:
+          type: integer
+        compliance_rate:
+          type: number
+      required: [condition, avg_value, min_value, max_value, count, compliance_rate]
+
+    ConditionBreakdownResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConditionBreakdownItem"
+      required: [items]
+
+    RoutePerformanceItem:
+      type: object
+      properties:
+        route_id:
+          type: string
+        route_name:
+          type: string
+        highway_number:
+          type: string
+        compliance_rate:
+          type: number
+        avg_reflectivity:
+          type: number
+        total_signs:
+          type: integer
+        critical_count:
+          type: integer
+      required: [route_id, route_name, highway_number, compliance_rate, avg_reflectivity, total_signs, critical_count]
+
+    RoutePerformanceResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoutePerformanceItem"
+      required: [items]
+
+    ActivityFeedItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [measurement_added, alert_created, alert_resolved, route_inspected, report_generated]
+        title:
+          type: string
+        description:
+          type: string
+        sign_name:
+          type: string
+        route_name:
+          type: string
+        created_at:
+          type: string
+      required: [id, type, title, description, created_at]
+
+    ActivityFeedResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityFeedItem"
+      required: [items]
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        route_id:
+          type: string
+        route_name:
+          type: string
+        type:
+          type: string
+          enum: [inspection, compliance, maintenance, periodic]
+        status:
+          type: string
+          enum: [draft, generating, ready, failed]
+        period_start:
+          type: string
+        period_end:
+          type: string
+        total_signs:
+          type: integer
+        compliance_rate:
+          type: number
+        critical_findings:
+          type: integer
+        generated_by:
+          type: string
+        created_at:
+          type: string
+      required: [id, title, type, status, created_at]
+
+    ReportListResponse:
+      type: object
+      properties:
+        reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/Report"
+        total:
+          type: integer
+      required: [reports, total]
+
+    CreateReportBody:
+      type: object
+      properties:
+        title:
+          type: string
+        route_id:
+          type: string
+        type:
+          type: string
+          enum: [inspection, compliance, maintenance, periodic]
+        period_start:
+          type: string
+        period_end:
+          type: string
+        generated_by:
+          type: string
+      required: [title, type, period_start, period_end]
+
+    AnalyzeImageBody:
+      type: object
+      properties:
+        image_url:
+          type: string
+        sign_type:
+          type: string
+        condition:
+          type: string
+      required: [image_url]
+
+    AnalysisResult:
+      type: object
+      properties:
+        estimated_value:
+          type: number
+        confidence:
+          type: number
+        status:
+          type: string
+          enum: [compliant, warning, critical]
+        recommendations:
+          type: array
+          items:
+            type: string
+        detected_issues:
+          type: array
+          items:
+            type: string
+        analysis_summary:
+          type: string
+      required: [estimated_value, confidence, status, recommendations, detected_issues, analysis_summary]
