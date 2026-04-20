@@ -15,14 +15,18 @@ import { format } from "date-fns";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-function downloadReport(id: string, title: string) {
+async function downloadReport(id: string, title: string) {
   const url = `${API_BASE}/api/reports/${id}/download`;
+  const res = await fetch(url);
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
+  a.href = blobUrl;
   a.download = `RetroVision_${title.replace(/[^a-z0-9]/gi, "_")}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+  URL.revokeObjectURL(blobUrl);
 }
 
 function statusBadge(status: string) {
