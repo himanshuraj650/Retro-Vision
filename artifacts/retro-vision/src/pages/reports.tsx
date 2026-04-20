@@ -10,7 +10,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { useListReports, useCreateReport, useDeleteReport, useListRoutes } from "@workspace/api-client-react";
 import { Plus, Trash2, FileText, Download } from "lucide-react";
+
 import { format } from "date-fns";
+
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function downloadReport(id: string, title: string) {
+  const url = `${API_BASE}/api/reports/${id}/download`;
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `RetroVision_${title.replace(/[^a-z0-9]/gi, "_")}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 
 function statusBadge(status: string) {
   if (status === "ready") return <Badge className="bg-green-600 text-white border-0">Ready</Badge>;
@@ -125,7 +138,14 @@ export default function Reports() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground"
+                      title="Download CSV"
+                      disabled={report.status !== "ready"}
+                      onClick={() => downloadReport(report.id, report.title)}
+                    >
                       <Download className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(report.id)}>
