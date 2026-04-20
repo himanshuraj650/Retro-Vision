@@ -44,6 +44,10 @@ Thumbs.db
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 
-# Replit
+# Replit-specific (not needed in external repos)
 .cache/
 .local/
+.replit
+replit.md
+**/artifact.toml
+**/.replit-artifact/
