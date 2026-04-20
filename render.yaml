@@ -1,35 +1,19 @@
 services:
   - type: web
     name: retrovision
-    runtime: node
+    runtime: static
     region: singapore
     plan: free
     buildCommand: >
       npm install -g pnpm &&
-      pnpm install --frozen-lockfile &&
-      BASE_PATH=/ pnpm --filter @workspace/retro-vision run build &&
-      pnpm --filter @workspace/api-server run build
-    startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: SERVE_STATIC
-        value: "true"
-      - key: PORT
-        fromService:
-          type: web
-          name: retrovision
-          property: port
-      - key: DATABASE_URL
-        fromDatabase:
-          name: retrovision-db
-          property: connectionString
-      - key: SESSION_SECRET
-        generateValue: true
-
-databases:
-  - name: retrovision-db
-    plan: free
-    region: singapore
-    databaseName: retrovision
-    user: retrovision
+      pnpm install --no-frozen-lockfile &&
+      BASE_PATH=/ pnpm --filter @workspace/retro-vision run build
+    staticPublishPath: artifacts/retro-vision/dist/public
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

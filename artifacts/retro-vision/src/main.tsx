@@ -1,3 +1,4 @@
+import "./lib/mock-data"; // Must be first — installs fetch interceptor
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
