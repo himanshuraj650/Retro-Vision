@@ -40,13 +40,13 @@ waitForPort = 8099
 name = "RetroVision"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "PORT=5173 BASE_PATH=/ pnpm --filter @workspace/retro-vision run dev"
-waitForPort = 5173
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=3000 BASE_PATH=/ pnpm --filter @workspace/retro-vision run dev"
+waitForPort = 3000
 
 [agent]
 stack = "PNPM_WORKSPACE"
@@ -58,6 +58,10 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[[ports]]
+localPort = 3000
+externalPort = 5000
 
 [[ports]]
 localPort = 5173
