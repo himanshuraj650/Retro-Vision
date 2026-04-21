@@ -316,4 +316,4 @@ Full OpenAPI spec at `lib/api-spec/openapi.yaml`.
 
 ## 📄 License
 
-MIT License — Built for NHAI 6th Innovation Hackathon by **Team Victory Strategy**.
+MIT License — Built for NHAI 6th Innovation Hackathon by **Team ReflectIQ**.
